@@ -224,6 +224,9 @@ export default function QuestionPage() {
     )
   }
 
+  function cn(...classes: (string | boolean | undefined | null)[]): string {
+    return classes.filter(Boolean).join(" ");
+  }
   return (
     <>
       <Navbar />
@@ -326,95 +329,115 @@ export default function QuestionPage() {
           </div>
         </div>
 
-        {answers.map((answer) => (
-          <Card key={answer._id} className="mb-6">
-            <CardContent className="p-0">
-              <div className="flex">
-                <div className="flex flex-col items-center gap-2 border-r p-4">
-                  <VoteButtons
-                    initialVotes={answer.voteCount}
-                    itemId={answer._id}
-                    itemType="answer"
-                    size="md"
-                    initialUserVote={
-                      session?.user?.id
-                        ? answer.upvotes.includes(session.user.id)
-                          ? "up"
-                          : answer.downvotes.includes(session.user.id)
-                            ? "down"
-                            : null
-                        : null
-                    }
-                  />
-                  {answer.accepted && (
-                    <div className="mt-2 rounded-full bg-green-100 p-1 text-green-600 dark:bg-green-900/30 dark:text-green-400">
-                      <Check className="h-5 w-5" />
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1 p-6">
-                  <div className="prose max-w-none dark:prose-invert">
-                    {answer.content.split("\n\n").map((paragraph, i) => (
-                      <p key={i}>{paragraph}</p>
-                    ))}
-                  </div>
-                  <div className="mt-6 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                     
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="text-sm text-muted-foreground">Answered {formatDate(answer.createdAt)}</div>
-                      <Avatar>
-                        <AvatarImage src={answer.author.image || "/placeholder.svg"} alt={answer.author.name} />
-                        <AvatarFallback>{answer.author.name.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="text-sm font-medium">{answer.author.name}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+        <div className="space-y-4">
+  <div className="flex items-center justify-between px-4">
+    <h2 className="text-xl font-semibold">
+      {answers.length} {answers.length === 1 ? "Answer" : "Answers"}
+    </h2>
+    <div className="flex gap-2">
+      <Button variant="ghost" size="sm" className="text-muted-foreground">
+        Newest
+      </Button>
+      <Button variant="ghost" size="sm" className="text-muted-foreground">
+        Most Votes
+      </Button>
+    </div>
+  </div>
 
-        <Separator className="my-8" />
-
-        <div className="mb-8">
-          <h2 className="mb-4 text-xl font-semibold">Your Answer</h2>
-          <form onSubmit={handleSubmitAnswer}>
-            <Textarea
-              value={newAnswer}
-              onChange={(e) => setNewAnswer(e.target.value)}
-              placeholder={session ? "Write your answer here..." : "Please log in to answer this question"}
-              className="mb-4 min-h-[200px]"
-              disabled={!session || submitting}
-            />
-            <Button type="submit" disabled={!session || submitting || !newAnswer.trim()}>
-              {submitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Posting...
-                </>
-              ) : (
-                "Post Your Answer"
-              )}
-            </Button>
-            {!session && (
-              <p className="mt-2 text-sm text-muted-foreground">
-                <Link href="/login" className="text-primary hover:underline">
-                  Log in
-                </Link>{" "}
-                or{" "}
-                <Link href="/login?tab=signup" className="text-primary hover:underline">
-                  sign up
-                </Link>{" "}
-                to post an answer.
-              </p>
-            )}
-          </form>
+  {answers.map((answer) => (
+    <div 
+      key={answer._id}
+      className={cn(
+        "p-4 border rounded-lg hover:bg-muted/50 transition-colors",
+        answer.accepted && "border-green-500 bg-green-50/50 dark:bg-green-900/20"
+      )}
+    >
+      <div className="flex gap-3">
+        {/* Voting Section */}
+        <div className="flex flex-col items-center gap-1">
+          <VoteButtons
+            initialVotes={answer.voteCount}
+            itemId={answer._id}
+            itemType="answer"
+            size="sm"
+            vertical={false}
+            initialUserVote={
+              session?.user?.id
+                ? answer.upvotes.includes(session.user.id)
+                  ? "up"
+                  : answer.downvotes.includes(session.user.id)
+                    ? "down"
+                    : null
+                : null
+            }
+          />
         </div>
+
+        {/* Main Content */}
+        <div className="flex-1">
+          {/* Author & Metadata */}
+          <div className="flex items-center gap-2 mb-2">
+            <Avatar className="h-6 w-6">
+              <AvatarImage src={answer.author.image} />
+              <AvatarFallback>{answer.author.name[0]}</AvatarFallback>
+            </Avatar>
+            <span className="text-sm font-medium">{answer.author.name}</span>
+            <span className="text-muted-foreground text-sm">·</span>
+            <span className="text-muted-foreground text-sm">
+              {formatDate(answer.createdAt)}
+            </span>
+            
+          </div>
+
+          {/* Answer Content */}
+          <div className="prose prose-sm dark:prose-invert max-w-none">
+            {answer.content}
+          </div>
+
+         
+        </div>
+      </div>
+    </div>
+  ))}
+
+  {/* Add Answer Section */}
+  <div className="sticky bottom-0 bg-background border-t pt-4">
+    <div className="flex gap-3">
+      <Avatar className="h-9 w-9">
+        <AvatarImage src={session?.user?.image || "/placeholder.svg"} />
+        <AvatarFallback>{session?.user?.name?.[0] || "U"}</AvatarFallback>
+      </Avatar>
+      <div className="flex-1">
+        <form onSubmit={handleSubmitAnswer}>
+          <Textarea
+            value={newAnswer}
+            onChange={(e) => setNewAnswer(e.target.value)}
+            placeholder={session ? "Post your answer..." : "Sign in to contribute"}
+            className="min-h-[100px] text-base"
+            disabled={!session || submitting}
+          />
+          <div className="flex justify-end gap-2 mt-2">
+            {!session ? (
+              <div className="text-sm text-muted-foreground">
+                <Link href="/login" className="text-primary hover:underline">Sign in</Link> to post
+              </div>
+            ) : (
+              <Button 
+                type="submit" 
+                size="sm"
+                disabled={submitting || !newAnswer.trim()}
+              >
+                {submitting ? "Posting..." : "Post Answer"}
+              </Button>
+            )}
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+        
       </div>
     </>
   )

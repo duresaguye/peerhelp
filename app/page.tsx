@@ -259,7 +259,7 @@ export default function Home() {
                                 <span>·</span>
                                 <span>{formatDate(answer.createdAt)}</span>
                                 {answer.accepted && (
-                                  <Badge variant="success" className="text-xs">
+                                  <Badge variant="default" className="text-xs">
                                     Accepted
                                   </Badge>
                                 )}

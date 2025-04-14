@@ -11,6 +11,7 @@ const AnswerSchema = new mongoose.Schema(
       ref: "User",
       required: [true, "Please provide an author"],
     },
+    replies: [{ type: mongoose.Schema.Types.ObjectId, ref: "Reply" }],
     question: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Question",
@@ -33,6 +34,7 @@ const AnswerSchema = new mongoose.Schema(
       default: false,
     },
   },
+  
   {
     timestamps: true,
     toJSON: { virtuals: true },

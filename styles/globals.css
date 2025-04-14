@@ -92,3 +92,19 @@ body {
     @apply bg-background text-foreground;
   }
 }
+.reply-form {
+  transition: all 0.3s ease;
+}
+
+.reply-list {
+  border-left: 2px solid #e5e7eb;
+  padding-left: 1rem;
+  margin-left: 2rem;
+}
+
+@media (max-width: 640px) {
+  .reply-list {
+    margin-left: 1rem;
+    padding-left: 0.5rem;
+  }
+}

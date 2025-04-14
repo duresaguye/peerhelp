@@ -8,19 +8,21 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   try {
     const session = await getServerSession(authOptions)
 
+  
+
     if (!session || !session.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     await dbConnect()
 
-    const answerId = params.id
+    const { id:answerId } = params
     const { voteType } = await req.json()
 
     if (voteType !== "up" && voteType !== "down") {
       return NextResponse.json({ error: "Invalid vote type" }, { status: 400 })
     }
-
+    
     const answer = await Answer.findById(answerId)
 
     if (!answer) {
@@ -59,10 +61,18 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     await answer.save()
 
+    // Check the user's vote status after update
+    const currentHasUpvoted = answer.upvotes.includes(userId)
+    const currentHasDownvoted = answer.downvotes.includes(userId)
+    let userVote = null
+    if (currentHasUpvoted) userVote = "up"
+    if (currentHasDownvoted) userVote = "down"
+
     return NextResponse.json({
       upvotes: answer.upvotes.length,
       downvotes: answer.downvotes.length,
       voteCount: answer.upvotes.length - answer.downvotes.length,
+      userVote 
     })
   } catch (error) {
     console.error("Error voting on answer:", error)

@@ -8,7 +8,7 @@ import { useAuthRedirect } from "@/hooks/use-auth-redirect"
 import { toast } from "@/hooks/use-toast"
 
 type VoteDirection = "up" | "down" | null
-type VoteItemType = "question" | "answer"
+type VoteItemType = "question" | "answer" |"reply"
 type SizeVariant = "sm" | "md" | "lg"
 
 interface VoteButtonsProps {
@@ -90,7 +90,7 @@ export default function VoteButtons({
     <div className={cn("flex items-center gap-1", vertical ? "flex-col" : "flex-row")}>
       <VoteButton
         direction="up"
-        size={currentSize}
+        sizeClasses={currentSize}
         isActive={isUpActive}
         disabled={isVoting}
         onClick={() => handleVote("up")}
@@ -107,7 +107,7 @@ export default function VoteButtons({
 
       <VoteButton
         direction="down"
-        size={currentSize}
+        sizeClasses={currentSize}
         isActive={isDownActive}
         disabled={isVoting}
         onClick={() => handleVote("down")}
@@ -118,13 +118,13 @@ export default function VoteButtons({
 
 interface VoteButtonProps extends ButtonProps {
   direction: "up" | "down"
-  size: { button: string; icon: string }
+  sizeClasses: { button: string; icon: string }
   isActive: boolean
 }
 
 const VoteButton = ({ 
   direction, 
-  size, 
+  sizeClasses, 
   isActive,
   ...props 
 }: VoteButtonProps) => (
@@ -133,7 +133,7 @@ const VoteButton = ({
     variant="ghost"
     size="icon"
     className={cn(
-      size.button,
+      sizeClasses.button,
       "rounded-full transition-colors",
       isActive ? direction === "up" 
         ? "text-green-600 bg-green-50 dark:bg-green-900/20 dark:text-green-400"
@@ -144,9 +144,9 @@ const VoteButton = ({
     {...props}
   >
     {direction === "up" ? (
-      <ArrowUp className={size.icon} />
+      <ArrowUp className={sizeClasses.icon} />
     ) : (
-      <ArrowDown className={size.icon} />
+      <ArrowDown className={sizeClasses.icon} />
     )}
     <span className="sr-only">{`${direction}vote`}</span>
   </Button>

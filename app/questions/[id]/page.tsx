@@ -125,7 +125,7 @@ function ReplyComponent({
             initialVotes={reply.voteCount}
             itemId={reply._id}
             itemType="reply"
-            size="xs"
+            size="sm"
             initialUserVote={
               session?.user?.id
                 ? reply.upvotes.includes(session.user.id)

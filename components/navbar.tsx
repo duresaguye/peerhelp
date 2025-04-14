@@ -49,6 +49,7 @@ export default function Navbar() {
       setSearchQuery("")
     }
   }
+  
 
   const handleLogout = async () => {
     await signOut({ redirect: false })

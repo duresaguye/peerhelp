@@ -60,19 +60,21 @@ const subjects = [
 
 export default function Home() {
   const router = useRouter()
-  const searchParams = useSearchParams()
+  const searchParams = useSearchParams();
+ 
   const [questions, setQuestions] = useState<Question[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
   const [sort, setSort] = useState("latest")
-  const [subject, setSubject] = useState(searchParams.get('subject') || "")
+  const [answersMap, setAnswersMap] = useState<Record<string, Answer[]>>({})
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || "")
+  const [subject, setSubject] = useState(searchParams.get('subject') || "")
   const [debouncedSearch, setDebouncedSearch] = useState("")
   const { data: session } = useSession()
 
-  // Debounce search input
+ 
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchQuery)
@@ -80,47 +82,51 @@ export default function Home() {
     return () => clearTimeout(timer)
   }, [searchQuery])
 
-  // Fetch questions when filters change
   useEffect(() => {
     const fetchQuestions = async () => {
-      setLoading(true)
-      setError(null)
+      setLoading(true);
+      setError(null);
       try {
         const params = new URLSearchParams({
           page: page.toString(),
           limit: "10",
           sort,
           includeAnswers: "true"
-        })
-
-        if (subject) params.append("subject", subject)
-        if (debouncedSearch) params.append("search", debouncedSearch)
-
-        const response = await fetch(`/api/questions?${params.toString()}`)
-        if (!response.ok) throw new Error("Failed to fetch questions")
-
-        const data = await response.json()
-        setQuestions(prev => page === 1 ? data.questions : [...prev, ...data.questions])
-        setHasMore(data.currentPage < data.totalPages)
+        });
+  
+        if (subject) params.append("subject", subject);
+        if (debouncedSearch) params.append("search", debouncedSearch);
+  
+        const response = await fetch(`/api/questions?${params.toString()}`);
+        if (!response.ok) throw new Error("Failed to fetch questions");
+  
+        const data = await response.json();
+        setQuestions(prev => page === 1 ? data.questions : [...prev, ...data.questions]);
+        setHasMore(data.currentPage < data.totalPages);
       } catch (err) {
-        setError("Failed to load questions. Please try again.")
-        toast.error("Failed to load questions")
+        setError("Failed to load questions. Please try again.");
+        toast.error("Failed to load questions");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
-    fetchQuestions()
-  }, [page, sort, subject, debouncedSearch])
+    };
+  
+   
+    fetchQuestions();
+  }, [page, sort, subject, debouncedSearch]);
 
-  // Update URL when search filters change
   useEffect(() => {
-    const params = new URLSearchParams()
-    if (subject) params.set('subject', subject)
-    if (searchQuery) params.set('q', searchQuery)
-    if (sort !== 'latest') params.set('sort', sort)
-    
-    router.replace(`/?${params.toString()}`, { scroll: false })
-  }, [subject, searchQuery, sort])
+  
+    const currentSubject = searchParams.get('subject') || "";
+    const currentSearch = searchParams.get('q') || "";
+    const currentSort = searchParams.get('sort') || "latest";
+  
+ 
+    if (currentSubject !== subject) setSubject(currentSubject);
+    if (currentSearch !== searchQuery) setSearchQuery(currentSearch);
+    if (currentSort !== sort) setSort(currentSort);
+    setPage(1);
+  }, [searchParams]);
 
   const handleLoadMore = () => !loading && hasMore && setPage(prev => prev + 1)
   
@@ -130,16 +136,29 @@ export default function Home() {
   }
 
   const handleSubjectChange = (newSubject: string) => {
-    setSubject(newSubject)
-    setPage(1)
-  }
+    setSubject(newSubject);
+    setSearchQuery(""); 
+    setSort("latest"); 
+    setPage(1); 
+    
+  
+    const params = new URLSearchParams();
+    if (newSubject) params.set('subject', newSubject);
+    router.replace(`/?${params.toString()}`, { scroll: false });
+    
+   
+    setDebouncedSearch("");
+  };
 
   const clearFilters = () => {
     setSubject("")
     setSearchQuery("")
     setSort("latest")
     setPage(1)
+    // Force a reload by pushing to the base URL
+    router.push("/", { scroll: false })
   }
+
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -154,6 +173,19 @@ export default function Home() {
            diffMins > 0 ? `${diffMins}m` : "Just now"
   }
 
+
+  const fetchAnswersFor = async (questionId: string) => {
+    try {
+      const res = await fetch(`/api/answers?questionId=${questionId}`)
+      if (!res.ok) throw new Error("Failed to fetch answers")
+      const { answers } = await res.json()
+      setAnswersMap((m) => ({ ...m, [questionId]: answers }))
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  
   return (
     <>
       <Navbar />
@@ -176,13 +208,7 @@ export default function Home() {
             >
               Top
             </Button>
-            <Button 
-              variant={sort === "unanswered" ? "outline" : "ghost"} 
-              size="sm" 
-              onClick={() => handleSortChange("unanswered")}
-            >
-              Unanswered
-            </Button>
+           
           </div>
 
           {/* Search and Subject Filter */}
@@ -288,7 +314,9 @@ export default function Home() {
                       />
                       <div className="flex items-center gap-1 text-sm text-muted-foreground">
                         <MessageSquare className="h-4 w-4" />
-                        <span>{question.answers?.length ?? 0}</span>
+                        <h2 className="text-xl font-semibold">
+              
+            </h2>
                       </div>
                     </div>
                     
@@ -332,6 +360,7 @@ export default function Home() {
                 </CardFooter>
               </Card>
             ))}
+            
           </div>
         )}
 

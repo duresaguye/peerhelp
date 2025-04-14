@@ -1,10 +1,8 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -34,12 +32,19 @@ export default function Navbar() {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const [selectedSubject, setSelectedSubject] = useState("")
   const { setTheme, theme } = useTheme()
   const { data: session, status } = useSession()
   const router = useRouter()
+  const searchParams = useSearchParams()
 
   const isLoggedIn = status === "authenticated"
   const user = session?.user
+
+  // Initialize selected subject from URL params
+  useEffect(() => {
+    setSelectedSubject(searchParams.get('subject') || "")
+  }, [searchParams])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -49,12 +54,84 @@ export default function Navbar() {
       setSearchQuery("")
     }
   }
-  
+
+  const handleSubjectSelect = (subjectValue: string) => {
+    const newSubject = subjectValue === selectedSubject ? "" : subjectValue;
+    setSelectedSubject(newSubject);
+    
+    // Update URL with new subject filter and force reload
+    const params = new URLSearchParams();
+    if (newSubject) params.set('subject', newSubject);
+    params.delete('q'); 
+    
+    // Use router.push instead of replace to ensure page reload
+    router.push(`/?${params.toString()}`);
+    setIsMobileMenuOpen(false);
+  };
 
   const handleLogout = async () => {
     await signOut({ redirect: false })
     router.push("/")
   }
+
+  const subjects = [
+   
+    {
+      title: "Web Development",
+      value: "web-development",
+      description: "HTML, CSS, JavaScript, Frontend Frameworks"
+    },
+    {
+      title: "Backend Development",
+      value: "backend-development",
+      description: "Node.js, Django, APIs, Databases"
+    },
+    {
+      title: "Mobile Development",
+      value: "mobile-development",
+      description: "React Native, Flutter, Swift, Kotlin"
+    },
+    {
+      title: "Data Structures & Algorithms",
+      value: "dsa",
+      description: "Arrays, Trees, Graphs, Sorting, Searching"
+    },
+    {
+      title: "Machine Learning",
+      value: "machine-learning",
+      description: "Neural Networks, TensorFlow, PyTorch, AI"
+    },
+    {
+      title: "Cybersecurity",
+      value: "cybersecurity",
+      description: "Encryption, Ethical Hacking, Network Security"
+    },
+    {
+      title: "Cloud Computing",
+      value: "cloud-computing",
+      description: "AWS, Azure, GCP, Serverless Architecture"
+    },
+    {
+      title: "DevOps",
+      value: "devops",
+      description: "CI/CD, Docker, Kubernetes, Infrastructure"
+    },
+    {
+      title: "Blockchain",
+      value: "blockchain",
+      description: "Smart Contracts, Cryptocurrency, Web3"
+    },
+    {
+      title: "Game Development",
+      value: "game-development",
+      description: "Unity, Unreal Engine, Game Design"
+    },
+    {
+      title: "Data Science",
+      value: "data-science",
+      description: "Python, R, SQL, Data Visualization"
+    }
+  ];
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -74,28 +151,32 @@ export default function Navbar() {
                   <NavigationMenuLink className={navigationMenuTriggerStyle()}>Home</NavigationMenuLink>
                 </Link>
               </NavigationMenuItem>
+              
               <NavigationMenuItem>
                 <NavigationMenuTrigger>Subjects</NavigationMenuTrigger>
                 <NavigationMenuContent>
                   <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px]">
                     {subjects.map((subject) => (
-                      <li key={subject.title}>
+                      <li key={subject.value}>
                         <NavigationMenuLink asChild>
-                          <Link
-                            href={subject.href}
-                            className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                          <div
+                            onClick={() => handleSubjectSelect(subject.value)}
+                            className={`block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground cursor-pointer ${
+                              selectedSubject === subject.value ? "bg-accent" : ""
+                            }`}
                           >
                             <div className="text-sm font-medium leading-none">{subject.title}</div>
                             <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
                               {subject.description}
                             </p>
-                          </Link>
+                          </div>
                         </NavigationMenuLink>
                       </li>
                     ))}
                   </ul>
                 </NavigationMenuContent>
               </NavigationMenuItem>
+              
               <NavigationMenuItem>
                 <Link href="/ask" legacyBehavior passHref>
                   <NavigationMenuLink className={navigationMenuTriggerStyle()}>Ask Question</NavigationMenuLink>
@@ -240,15 +321,33 @@ export default function Navbar() {
         )}
       >
         <nav className="container py-4 space-y-4">
-          <Link href="/" className="flex w-full py-2 text-lg font-medium">
+          <Link href="/" className="flex w-full py-2 text-lg font-medium" onClick={() => setIsMobileMenuOpen(false)}>
             Home
           </Link>
-          <Link href="/subjects" className="flex w-full py-2 text-lg font-medium">
-            Subjects
-          </Link>
-          <Link href="/ask" className="flex w-full py-2 text-lg font-medium">
+          
+          <div className="flex flex-col">
+            <p className="py-2 text-lg font-medium">Subjects</p>
+            <div className="grid grid-cols-2 gap-2">
+              {subjects.map((subject) => (
+                <Button
+                  key={subject.value}
+                  variant={selectedSubject === subject.value ? "outline" : "ghost"}
+                  className="justify-start"
+                  onClick={() => {
+                    handleSubjectSelect(subject.value)
+                    setIsMobileMenuOpen(false)
+                  }}
+                >
+                  {subject.title}
+                </Button>
+              ))}
+            </div>
+          </div>
+          
+          <Link href="/ask" className="flex w-full py-2 text-lg font-medium" onClick={() => setIsMobileMenuOpen(false)}>
             Ask Question
           </Link>
+          
           <div className="pt-4 border-t">
             {isLoggedIn ? (
               <div className="flex items-center gap-4">
@@ -268,12 +367,12 @@ export default function Navbar() {
               </div>
             ) : (
               <div className="flex flex-col gap-2">
-                <Link href="/login" className="w-full">
+                <Link href="/login" className="w-full" onClick={() => setIsMobileMenuOpen(false)}>
                   <Button variant="outline" className="w-full">
                     Log in
                   </Button>
                 </Link>
-                <Link href="/login?tab=signup" className="w-full">
+                <Link href="/login?tab=signup" className="w-full" onClick={() => setIsMobileMenuOpen(false)}>
                   <Button className="w-full">Sign up</Button>
                 </Link>
               </div>
@@ -284,36 +383,3 @@ export default function Navbar() {
     </header>
   )
 }
-
-const subjects = [
-  {
-    title: "Mathematics",
-    description: "Algebra, Calculus, Statistics, Geometry, and more",
-    href: "/?subject=mathematics",
-  },
-  {
-    title: "Computer Science",
-    description: "Programming, Algorithms, Data Structures, and more",
-    href: "/?subject=computer-science",
-  },
-  {
-    title: "Physics",
-    description: "Mechanics, Thermodynamics, Electromagnetism, and more",
-    href: "/?subject=physics",
-  },
-  {
-    title: "Chemistry",
-    description: "Organic Chemistry, Inorganic Chemistry, Biochemistry, and more",
-    href: "/?subject=chemistry",
-  },
-  {
-    title: "Biology",
-    description: "Molecular Biology, Genetics, Ecology, and more",
-    href: "/?subject=biology",
-  },
-  {
-    title: "Literature",
-    description: "Fiction, Poetry, Drama, Literary Analysis, and more",
-    href: "/?subject=literature",
-  },
-]

@@ -6,14 +6,20 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { MessageSquare, Clock, Search, Loader2,X  } from "lucide-react"
+import { MessageSquare, Clock, Search, Loader2, X } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import Navbar from "@/components/navbar"
 import VoteButtons from "@/components/vote-buttons"
 import { useSession } from "next-auth/react"
 import { toast } from "sonner"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu"
 
 interface Author {
   _id: string
@@ -45,6 +51,7 @@ interface Question {
   views: number
   answers: Answer[]
   images: string[]
+  answerCount: number
 }
 
 const subjects = [
@@ -60,21 +67,19 @@ const subjects = [
 
 export default function Home() {
   const router = useRouter()
-  const searchParams = useSearchParams();
- 
+  const searchParams = useSearchParams()
+
   const [questions, setQuestions] = useState<Question[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
   const [sort, setSort] = useState("latest")
-  const [answersMap, setAnswersMap] = useState<Record<string, Answer[]>>({})
-  const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || "")
-  const [subject, setSubject] = useState(searchParams.get('subject') || "")
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "")
+  const [subject, setSubject] = useState(searchParams.get("subject") || "")
   const [debouncedSearch, setDebouncedSearch] = useState("")
   const { data: session } = useSession()
 
- 
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchQuery)
@@ -84,81 +89,78 @@ export default function Home() {
 
   useEffect(() => {
     const fetchQuestions = async () => {
-      setLoading(true);
-      setError(null);
+      setLoading(true)
+      setError(null)
       try {
         const params = new URLSearchParams({
           page: page.toString(),
           limit: "10",
           sort,
-          includeAnswers: "true"
-        });
-  
-        if (subject) params.append("subject", subject);
-        if (debouncedSearch) params.append("search", debouncedSearch);
-  
-        const response = await fetch(`/api/questions?${params.toString()}`);
-        if (!response.ok) throw new Error("Failed to fetch questions");
-  
-        const data = await response.json();
-        setQuestions(prev => page === 1 ? data.questions : [...prev, ...data.questions]);
-        setHasMore(data.currentPage < data.totalPages);
+          includeAnswers: "true",
+        })
+
+        if (subject) params.append("subject", subject)
+        if (debouncedSearch) params.append("search", debouncedSearch)
+
+        const response = await fetch(`/api/questions?${params.toString()}`, {
+          next: { tags: ["questions"] }
+        })
+
+        if (!response.ok) throw new Error("Failed to fetch questions")
+
+        const data = await response.json()
+        setQuestions(prev => 
+          page === 1 ? data.questions : [...prev, ...data.questions]
+        )
+        setHasMore(data.currentPage < data.totalPages)
       } catch (err) {
-        setError("Failed to load questions. Please try again.");
-        toast.error("Failed to load questions");
+        setError("Failed to load questions. Please try again.")
+        toast.error("Failed to load questions")
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
-  
-   
-    fetchQuestions();
-  }, [page, sort, subject, debouncedSearch]);
+    }
+
+    fetchQuestions()
+  }, [page, sort, subject, debouncedSearch])
 
   useEffect(() => {
-  
-    const currentSubject = searchParams.get('subject') || "";
-    const currentSearch = searchParams.get('q') || "";
-    const currentSort = searchParams.get('sort') || "latest";
-  
- 
-    if (currentSubject !== subject) setSubject(currentSubject);
-    if (currentSearch !== searchQuery) setSearchQuery(currentSearch);
-    if (currentSort !== sort) setSort(currentSort);
-    setPage(1);
-  }, [searchParams]);
+    const currentSubject = searchParams.get("subject") || ""
+    const currentSearch = searchParams.get("q") || ""
+    const currentSort = searchParams.get("sort") || "latest"
+
+    if (currentSubject !== subject) setSubject(currentSubject)
+    if (currentSearch !== searchQuery) setSearchQuery(currentSearch)
+    if (currentSort !== sort) setSort(currentSort)
+    setPage(1)
+  }, [searchParams])
 
   const handleLoadMore = () => !loading && hasMore && setPage(prev => prev + 1)
-  
+
   const handleSortChange = (newSort: string) => {
     setSort(newSort)
     setPage(1)
   }
 
   const handleSubjectChange = (newSubject: string) => {
-    setSubject(newSubject);
-    setSearchQuery(""); 
-    setSort("latest"); 
-    setPage(1); 
-    
-  
-    const params = new URLSearchParams();
-    if (newSubject) params.set('subject', newSubject);
-    router.replace(`/?${params.toString()}`, { scroll: false });
-    
-   
-    setDebouncedSearch("");
-  };
+    setSubject(newSubject)
+    setSearchQuery("")
+    setSort("latest")
+    setPage(1)
+
+    const params = new URLSearchParams()
+    if (newSubject) params.set("subject", newSubject)
+    router.replace(`/?${params.toString()}`, { scroll: false })
+    setDebouncedSearch("")
+  }
 
   const clearFilters = () => {
     setSubject("")
     setSearchQuery("")
     setSort("latest")
     setPage(1)
-    // Force a reload by pushing to the base URL
     router.push("/", { scroll: false })
   }
-
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -168,31 +170,39 @@ export default function Home() {
     const diffHours = Math.floor(diffMins / 60)
     const diffDays = Math.floor(diffHours / 24)
 
-    return diffDays > 0 ? `${diffDays}d` : 
-           diffHours > 0 ? `${diffHours}h` : 
-           diffMins > 0 ? `${diffMins}m` : "Just now"
+    return diffDays > 0
+      ? `${diffDays}d`
+      : diffHours > 0
+      ? `${diffHours}h`
+      : diffMins > 0
+      ? `${diffMins}m`
+      : "Just now"
   }
 
-
-  const fetchAnswersFor = async (questionId: string) => {
-    try {
-      const res = await fetch(`/api/answers?questionId=${questionId}`)
-      if (!res.ok) throw new Error("Failed to fetch answers")
-      const { answers } = await res.json()
-      setAnswersMap((m) => ({ ...m, [questionId]: answers }))
-    } catch (err) {
-      console.error(err)
-    }
+  const handleVoteUpdate = (questionId: string, newVoteCount: number, userVote: "up" | "down" | null) => {
+    setQuestions(prev => prev.map(question => {
+      if (question._id === questionId) {
+        return {
+          ...question,
+          voteCount: newVoteCount,
+          upvotes: userVote === "up" 
+            ? [...question.upvotes, session?.user?.id || ""]
+            : question.upvotes.filter(id => id !== session?.user?.id),
+          downvotes: userVote === "down" 
+            ? [...question.downvotes, session?.user?.id || ""]
+            : question.downvotes.filter(id => id !== session?.user?.id)
+        }
+      }
+      return question
+    }))
   }
 
-  
   return (
     <>
       <Navbar />
       <div className="container mx-auto py-8">
         {/* Search and Filter Controls */}
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          {/* Sort Buttons */}
           <div className="flex gap-2">
             <Button 
               variant={sort === "latest" ? "outline" : "ghost"} 
@@ -208,21 +218,19 @@ export default function Home() {
             >
               Top
             </Button>
-           
           </div>
 
-          {/* Search and Subject Filter */}
           <div className="flex gap-2">
             <div className="relative w-full max-w-md">
               <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input 
-                placeholder="Search questions..." 
-                className="pl-8 h-9 w-full" 
+              <Input
+                placeholder="Search questions..."
+                className="pl-8 h-9 w-full"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant={subject ? "outline" : "ghost"} size="sm">
@@ -234,7 +242,7 @@ export default function Home() {
                   All Subjects
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                {subjects.map((subjectItem) => (
+                {subjects.map(subjectItem => (
                   <DropdownMenuItem 
                     key={subjectItem.value}
                     onClick={() => handleSubjectChange(subjectItem.value)}
@@ -247,24 +255,35 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Active Filters */}
         {(subject || searchQuery || sort !== "latest") && (
           <div className="mb-4 flex flex-wrap items-center gap-2">
             <p className="text-sm text-muted-foreground">Filters:</p>
             {subject && (
-              <Badge variant="secondary" className="cursor-pointer" onClick={() => setSubject("")}>
+              <Badge 
+                variant="secondary" 
+                className="cursor-pointer" 
+                onClick={() => setSubject("")}
+              >
                 Subject: {subjects.find(s => s.value === subject)?.title || subject}
                 <X className="ml-1 h-3 w-3" />
               </Badge>
             )}
             {searchQuery && (
-              <Badge variant="secondary" className="cursor-pointer" onClick={() => setSearchQuery("")}>
+              <Badge
+                variant="secondary"
+                className="cursor-pointer"
+                onClick={() => setSearchQuery("")}
+              >
                 Search: {searchQuery}
                 <X className="ml-1 h-3 w-3" />
               </Badge>
             )}
             {sort !== "latest" && (
-              <Badge variant="secondary" className="cursor-pointer" onClick={() => setSort("latest")}>
+              <Badge
+                variant="secondary"
+                className="cursor-pointer"
+                onClick={() => setSort("latest")}
+              >
                 Sort: {sort.charAt(0).toUpperCase() + sort.slice(1)}
                 <X className="ml-1 h-3 w-3" />
               </Badge>
@@ -280,7 +299,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* Questions List */}
         {loading && page === 1 ? (
           <div className="flex justify-center py-8">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -300,29 +318,34 @@ export default function Home() {
               <Card key={question._id} className="hover:shadow-md transition-shadow">
                 <CardContent className="p-0">
                   <div className="flex">
-                    {/* Vote buttons */}
                     <div className="flex flex-col items-center gap-2 border-r p-4">
                       <VoteButtons
                         initialVotes={question.voteCount}
                         itemId={question._id}
                         itemType="question"
                         size="sm"
-                        initialUserVote={session?.user?.id ? 
-                          question.upvotes.includes(session.user.id) ? "up" :
-                          question.downvotes.includes(session.user.id) ? "down" : null 
-                        : null}
+                        initialUserVote={
+                          session?.user?.id
+                            ? question.upvotes.includes(session.user.id)
+                              ? "up"
+                              : question.downvotes.includes(session.user.id)
+                              ? "down"
+                              : null
+                            : null
+                        }
+                        onVoteSuccess={handleVoteUpdate}
                       />
                       <div className="flex items-center gap-1 text-sm text-muted-foreground">
                         <MessageSquare className="h-4 w-4" />
-                        <h2 className="text-xl font-semibold">
-              
-            </h2>
+                        <span>{question.answerCount}</span>
                       </div>
                     </div>
-                    
-                    {/* Question content */}
+
                     <div className="flex-1 p-4">
-                      <Link href={`/questions/${question._id}`} className="text-lg font-medium hover:underline">
+                      <Link 
+                        href={`/questions/${question._id}`} 
+                        className="text-lg font-medium hover:underline"
+                      >
                         {question.title}
                       </Link>
                       <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
@@ -330,9 +353,9 @@ export default function Home() {
                       </p>
                       <div className="mt-3 flex flex-wrap gap-2 items-center">
                         {question.tags.map(tag => (
-                          <Badge 
-                            key={tag} 
-                            variant="secondary" 
+                          <Badge
+                            key={tag}
+                            variant="secondary"
                             className="text-xs cursor-pointer hover:bg-accent"
                             onClick={() => handleSubjectChange(tag)}
                           >
@@ -350,8 +373,11 @@ export default function Home() {
                 <CardFooter className="border-t p-4 bg-muted/50">
                   <div className="w-full flex justify-between items-center text-xs">
                     <div>
-                      Asked by{' '}
-                      <Link href={`/users/${question.author._id}`} className="font-medium hover:underline">
+                      Asked by{" "}
+                      <Link 
+                        href={`/users/${question.author._id}`} 
+                        className="font-medium hover:underline"
+                      >
                         {question.author.name}
                       </Link>
                     </div>
@@ -360,14 +386,17 @@ export default function Home() {
                 </CardFooter>
               </Card>
             ))}
-            
           </div>
         )}
 
-        {/* Load More Button */}
         {hasMore && (
           <div className="mt-6 flex justify-center">
-            <Button variant="outline" size="sm" onClick={handleLoadMore} disabled={loading}>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleLoadMore} 
+              disabled={loading}
+            >
               {loading && page > 1 ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

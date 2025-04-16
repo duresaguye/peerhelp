@@ -57,13 +57,12 @@ QuestionSchema.virtual("voteCount").get(function () {
 })
 
 // Virtual for answers
-QuestionSchema.virtual("answers", {
-  ref: "Answer",
-  localField: "_id",
-  foreignField: "question",
-  count: true,
-})
-
+QuestionSchema.virtual('answerCount', {
+  ref: 'Answer',
+  localField: '_id',
+  foreignField: 'question',
+  count: true
+});
 // Virtual for comments
 QuestionSchema.virtual("comments", {
   ref: "Comment",

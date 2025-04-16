@@ -19,6 +19,7 @@ interface VoteButtonsProps {
   vertical?: boolean
   size?: SizeVariant
   initialUserVote?: VoteDirection
+  onVoteSuccess?: (itemId: string, newVoteCount: number, userVote: "up" | "down" | null) => void;
 }
 
 const SIZE_CLASSES: Record<SizeVariant, { button: string; icon: string; text: string }> = {

@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next"
 import { authOptions } from "../auth/[...nextauth]/route"
 import dbConnect from "@/lib/db"
 import Question from "@/models/Question"
+import Answer from "@/models/Answer"
 
 export async function GET(req: NextRequest) {
   try {
@@ -14,6 +15,7 @@ export async function GET(req: NextRequest) {
     const sort = url.searchParams.get("sort") || "latest"
     const subject = url.searchParams.get("subject") || ""
     const search = url.searchParams.get("search") || ""
+    const includeAnswers = url.searchParams.get("includeAnswers") === "true"
 
     const skip = (page - 1) * limit
 
@@ -41,12 +43,23 @@ export async function GET(req: NextRequest) {
       .populate("author", "name image")
       .populate("upvotes", "_id")
       .populate("downvotes", "_id")
+      .select('+answerCount')
       .lean()
 
     const totalQuestions = await Question.countDocuments(query)
+     // Get answer counts for all fetched questions
+     const questionIds = questions.map(q => q._id)
+     const answerCounts = await Answer.aggregate([
+       { $match: { question: { $in: questionIds } } },
+       { $group: { _id: "$question", count: { $sum: 1 } } }
+     ])
+     const questionsWithCounts = questions.map(question => ({
+      ...question,
+      answerCount: answerCounts.find(ac => ac._id.equals(question._id))?.count || 0
+    }))
 
     return NextResponse.json({
-      questions,
+      questions: questionsWithCounts,
       totalPages: Math.ceil(totalQuestions / limit),
       currentPage: page,
     })

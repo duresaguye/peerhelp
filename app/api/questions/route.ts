@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
       .populate("upvotes", "_id")
       .populate("downvotes", "_id")
       .select('+answerCount')
-      .lean()
+      .lean<{ _id: string; upvotes: { _id: string }[]; downvotes: { _id: string }[] }[]>({ virtuals: true })
 
     const totalQuestions = await Question.countDocuments(query)
      // Get answer counts for all fetched questions
@@ -57,6 +57,14 @@ export async function GET(req: NextRequest) {
       ...question,
       answerCount: answerCounts.find(ac => ac._id.equals(question._id))?.count || 0
     }))
+
+    const plainQuestions = questions.map(q => ({
+      ...q,
+      _id: q._id.toString(),
+      upvotes: q.upvotes.map(id => id.toString()),
+      downvotes: q.downvotes.map(id => id.toString())
+    }));
+
 
     return NextResponse.json({
       questions: questionsWithCounts,

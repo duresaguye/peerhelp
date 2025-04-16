@@ -12,7 +12,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     const userId = params.id
 
     // Find user
-    const user = await User.findById(userId).lean()
+    const user = await User.findById(userId).lean() as { _id: string; name: string; image?: string; location?: string; createdAt?: string; joinedAt?: string; bio?: string } | null
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
@@ -24,14 +24,14 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     const bestAnswersCount = await Answer.countDocuments({ author: userId, accepted: true })
 
     // Get recent questions
-    const questions = await Question.find({ author: userId }).sort({ createdAt: -1 }).limit(3).lean()
+    const questions = await Question.find({ author: userId }).sort({ createdAt: -1 }).limit(3).lean<{ _id: string; title: string; createdAt: string }[]>()
 
     // Get recent answers
     const answers = await Answer.find({ author: userId })
       .sort({ createdAt: -1 })
       .limit(3)
       .populate("question", "title")
-      .lean()
+      .lean<{ _id: string; createdAt: string; question?: { _id: string; title: string } }[]>()
 
     // Get recent comments
     const comments = await Comment.find({ author: userId })
@@ -41,7 +41,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         { path: "question", select: "title" },
         { path: "answer", select: "content", populate: { path: "question", select: "title" } },
       ])
-      .lean()
+      .lean<{ _id: string; createdAt: string; question?: { _id: string; title: string }; answer?: { content: string; question?: { _id: string; title: string } } }[]>()
 
     // Format activity
     const recentActivity = [
@@ -109,7 +109,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
     // Format response
     const userProfile = {
-      _id: user._id.toString(),
+      _id: user?._id.toString() || "",
       name: user.name,
       image: user.image || "/placeholder.svg?height=100&width=100",
       location: user.location || "",

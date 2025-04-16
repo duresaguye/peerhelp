@@ -53,6 +53,7 @@ export default function VoteButtons({
   const [userVote, setUserVote] = useState<VoteDirection>(initialUserVote)
   const [isVoting, setIsVoting] = useState(false)
   const { requireAuth } = useAuthRedirect()
+  const [forceRefresh, setForceRefresh] = useState(0);
 
   const handleVote = async (direction: VoteDirection) => {
     if (isVoting || !direction) return
@@ -75,7 +76,7 @@ export default function VoteButtons({
       setVotes(data.voteCount)
       setUserVote(current => current === direction ? null : direction)
       onVote?.(data.voteCount)
-
+      setForceRefresh(prev => prev + 1);
     } catch (error) {
       toast.error("Failed to register vote. Please try again.")
     } finally {

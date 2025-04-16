@@ -79,7 +79,9 @@ export default function Home() {
   const [subject, setSubject] = useState(searchParams.get("subject") || "")
   const [debouncedSearch, setDebouncedSearch] = useState("")
   const { data: session } = useSession()
+  const [forceRefresh, setForceRefresh] = useState(0);
 
+  
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchQuery)
@@ -101,8 +103,10 @@ export default function Home() {
 
         if (subject) params.append("subject", subject)
         if (debouncedSearch) params.append("search", debouncedSearch)
+          const cacheBuster = new Date().getTime();
 
-        const response = await fetch(`/api/questions?${params.toString()}`, {
+        const response = await fetch(`/api/questions?${params.toString()}&cb=${cacheBuster}`, {
+          cache: "no-store",
           next: { tags: ["questions"] }
         })
 
@@ -122,7 +126,7 @@ export default function Home() {
     }
 
     fetchQuestions()
-  }, [page, sort, subject, debouncedSearch])
+  }, [page, sort, subject, debouncedSearch, forceRefresh])
 
   useEffect(() => {
     const currentSubject = searchParams.get("subject") || ""
@@ -333,7 +337,11 @@ export default function Home() {
                               : null
                             : null
                         }
-                        onVoteSuccess={handleVoteUpdate}
+                        onVoteSuccess={(id, newCount, userVote) => {
+                          handleVoteUpdate(id, newCount, userVote)
+                          router.refresh()
+                        }}
+                        
                       />
                       <div className="flex items-center gap-1 text-sm text-muted-foreground">
                         <MessageSquare className="h-4 w-4" />

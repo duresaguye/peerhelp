@@ -53,23 +53,23 @@ export async function POST(
     if (voteType === "up") {
       if (hasUpvoted) {
         question.upvotes = question.upvotes.filter(
-          (id) => id.toString() !== userId
+          (id: string) => id.toString() !== userId
         )
       } else {
         question.upvotes.push(userId)
         question.downvotes = question.downvotes.filter(
-          (id) => id.toString() !== userId
+          (id: string) => id.toString() !== userId
         )
       }
     } else {
       if (hasDownvoted) {
         question.downvotes = question.downvotes.filter(
-          (id) => id.toString() !== userId
+          (id: string) => id.toString() !== userId
         )
       } else {
         question.downvotes.push(userId)
         question.upvotes = question.upvotes.filter(
-          (id) => id.toString() !== userId
+          (id: string) => id.toString() !== userId
         )
       }
     }
@@ -83,19 +83,24 @@ export async function POST(
     ) {
       await question.save()
       
-      // Revalidate relevant paths
-      revalidatePath("/")
-      revalidatePath(`/questions/${questionId}`)
-      revalidateTag("questions")
+      revalidatePath("/", "layout");
+      revalidateTag("questions");
+      revalidatePath(`/questions/${questionId}`);
     }
 
-    return NextResponse.json({
+    interface VoteResponse {
+      success: boolean;
+      upvotes: string[];
+      downvotes: string[];
+      voteCount: number;
+    }
+
+    return NextResponse.json<VoteResponse>({
       success: true,
-      upvotes: question.upvotes.length,
-      downvotes: question.downvotes.length,
-      voteCount: question.upvotes.length - question.downvotes.length,
-      userVote: voteType === "up" ? "up" : "down"
-    })
+      upvotes: question.upvotes.map((id: string) => id.toString()),
+      downvotes: question.downvotes.map((id: string) => id.toString()),
+      voteCount: question.upvotes.length - question.downvotes.length
+    });
   } catch (error) {
     console.error("Error voting on question:", error)
     return NextResponse.json(

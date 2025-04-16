@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge"
 import { Loader2 } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import Navbar from "@/components/navbar"
+import { useParams } from "next/navigation";
+
 
 interface UserActivity {
   _id: string
@@ -39,7 +41,10 @@ interface UserProfile {
   recentActivity: UserActivity[]
 }
 
-export default function UserProfile({ params }: { params: { id: string } }) {
+export default function UserProfile() {
+
+  const { id } = useParams() as { id: string }
+
   const router = useRouter()
   const [user, setUser] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
@@ -51,7 +56,8 @@ export default function UserProfile({ params }: { params: { id: string } }) {
       setError(null)
 
       try {
-        const response = await fetch(`/api/users/${params.id}`)
+       const response = await fetch(`/api/users/${id}`)
+
 
         if (!response.ok) {
           if (response.status === 404) {
@@ -71,7 +77,7 @@ export default function UserProfile({ params }: { params: { id: string } }) {
     }
 
     fetchUserProfile()
-  }, [params.id])
+  }, [id])
 
   if (loading) {
     return (

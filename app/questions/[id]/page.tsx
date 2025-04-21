@@ -63,16 +63,43 @@ interface Answer {
 function ReplyComponent({ 
   reply,
   session,
-  answerId
+  answerId,
+  parentReplyId
 }: { 
   reply: Reply
   session: any
   answerId: string
+  parentReplyId?: string
 }) {
   const [isReplying, setIsReplying] = useState(false)
   const [replyContent, setReplyContent] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showActions, setShowActions] = useState(false)
+  const [nestedReplies, setNestedReplies] = useState<Reply[]>([])
+  const [loadingNestedReplies, setLoadingNestedReplies] = useState(false)
+  const [showNestedReplies, setShowNestedReplies] = useState(false)
+
+  // Fetch nested replies when component mounts
+  useEffect(() => {
+    const fetchNestedReplies = async () => {
+      setLoadingNestedReplies(true)
+      try {
+        const response = await fetch(`/api/answers/${answerId}/replies?parentReplyId=${reply._id}`)
+        if (!response.ok) throw new Error("Failed to fetch nested replies")
+        const data = await response.json()
+        setNestedReplies(data)
+      } catch (error) {
+        console.error("Error fetching nested replies:", error)
+        toast.error("Failed to load nested replies")
+      } finally {
+        setLoadingNestedReplies(false)
+      }
+    }
+
+    if (showNestedReplies) {
+      fetchNestedReplies()
+    }
+  }, [answerId, reply._id, showNestedReplies])
 
   const handleSubmitReply = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -95,10 +122,10 @@ function ReplyComponent({
       if (!response.ok) throw new Error("Failed to submit reply")
 
       const newReply = await response.json()
-     
-      toast.success("Reply posted successfully")
+      setNestedReplies([...nestedReplies, newReply])
       setReplyContent("")
       setIsReplying(false)
+      toast.success("Reply posted successfully")
     } catch (error) {
       toast.error("Failed to submit reply. Please try again.")
     } finally {
@@ -129,10 +156,10 @@ function ReplyComponent({
               {showActions && (
                 <div className="absolute right-0 mt-1 w-48 rounded-md shadow-lg bg-background border">
                   <div className="py-1">
-                    <button className="w-full text-left px-4 py-2 text-sm hover:bg-muted/50">
+                    <button key="edit" className="w-full text-left px-4 py-2 text-sm hover:bg-muted/50">
                       Edit
                     </button>
-                    <button className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-muted/50">
+                    <button key="delete" className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-muted/50">
                       Delete
                     </button>
                   </div>
@@ -170,38 +197,75 @@ function ReplyComponent({
               Reply
             </button>
           )}
+
+          {nestedReplies.length > 0 && (
+            <button
+              onClick={() => setShowNestedReplies(!showNestedReplies)}
+              className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1"
+            >
+              {showNestedReplies ? (
+                <span>Hide {nestedReplies.length} {nestedReplies.length === 1 ? 'reply' : 'replies'}</span>
+              ) : (
+                <span>Show {nestedReplies.length} {nestedReplies.length === 1 ? 'reply' : 'replies'}</span>
+              )}
+            </button>
+          )}
         </div>
 
         {isReplying && (
           <div className="mt-3 pl-4">
-            <form onSubmit={handleSubmitReply}>
-              <Textarea
-                value={replyContent}
-                onChange={(e) => setReplyContent(e.target.value)}
-                placeholder="Write your reply..."
-                className="min-h-[60px] text-sm bg-background"
-                disabled={isSubmitting}
-              />
-              <div className="flex justify-end gap-2 mt-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  type="button"
-                  onClick={() => setIsReplying(false)}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  type="submit" 
-                  size="sm"
-                  disabled={isSubmitting || !replyContent.trim()}
-                >
-                  {isSubmitting ? "Posting..." : "Post Reply"}
-                </Button>
+            <form onSubmit={handleSubmitReply} className="flex gap-3">
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={session?.user?.image} />
+                <AvatarFallback>{session?.user?.name?.[0]}</AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <Textarea
+                  value={replyContent}
+                  onChange={(e) => setReplyContent(e.target.value)}
+                  placeholder="Write your reply..."
+                  className="min-h-[60px] text-sm bg-background"
+                  disabled={isSubmitting}
+                />
+                <div className="flex justify-end gap-2 mt-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    type="button"
+                    onClick={() => setIsReplying(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    size="sm"
+                    disabled={isSubmitting || !replyContent.trim()}
+                  >
+                    {isSubmitting ? "Posting..." : "Reply"}
+                  </Button>
+                </div>
               </div>
             </form>
           </div>
         )}
+
+        {loadingNestedReplies ? (
+          <div className="mt-3 pl-6 flex justify-center">
+            <Loader2 className="h-5 w-5 animate-spin" />
+          </div>
+        ) : showNestedReplies && nestedReplies.length > 0 ? (
+          <div className="mt-3 pl-6 space-y-3">
+            {nestedReplies.map((nestedReply) => (
+              <ReplyComponent 
+                key={nestedReply._id} 
+                reply={nestedReply}
+                session={session}
+                answerId={answerId}
+                parentReplyId={reply._id}
+              />
+            ))}
+          </div>
+        ) : null}
       </div>
     </div>
   )
@@ -243,6 +307,7 @@ function AnswerComponent({
   const [isSubmittingReply, setIsSubmittingReply] = useState(false)
   const [replies, setReplies] = useState<Reply[]>(answer.replies || [])
   const [loadingReplies, setLoadingReplies] = useState(false)
+  const [showReplies, setShowReplies] = useState(replies.length > 0)
   const [upvotes, setUpvotes] = useState(answer.upvotes.length)
   const [downvotes, setDownvotes] = useState(answer.downvotes.length)
   const [userVote, setUserVote] = useState<"up" | "down" | null>(
@@ -378,6 +443,23 @@ function AnswerComponent({
               )}
             </button>
           )}
+
+          {replies.length > 0 && (
+            <button
+              onClick={() => setShowReplies(!showReplies)}
+              className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1"
+            >
+              {showReplies ? (
+                <>
+                  <span>Hide {replies.length} {replies.length === 1 ? 'reply' : 'replies'}</span>
+                </>
+              ) : (
+                <>
+                  <span>Show {replies.length} {replies.length === 1 ? 'reply' : 'replies'}</span>
+                </>
+              )}
+            </button>
+          )}
         </div>
 
         {/* Reply form */}
@@ -423,11 +505,10 @@ function AnswerComponent({
           <div className="mt-3 pl-6 flex justify-center">
             <Loader2 className="h-5 w-5 animate-spin" />
           </div>
-        ) : replies.length > 0 ? (
-          <div className="mt-3 pl-6">
+        ) : showReplies && replies.length > 0 ? (
+          <div className="mt-3 pl-6 space-y-3">
             {replies.map((reply) => {
               if (!reply._id) {
-                console.error('Reply missing _id:', reply);
                 return null;
               }
               return (

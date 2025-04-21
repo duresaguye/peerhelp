@@ -10,8 +10,6 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    
-    
     await dbConnect()
     const session = await getServerSession(authOptions)
 
@@ -22,9 +20,7 @@ export async function POST(
       )
     }
 
-   
-
-    const questionId = params.id
+    const { id: questionId } = await Promise.resolve(params)
     const { voteType } = await req.json()
 
     if (!["up", "down"].includes(voteType)) {
@@ -92,14 +88,16 @@ export async function POST(
       success: boolean;
       upvotes: string[];
       downvotes: string[];
-      voteCount: number;
+      upvoteCount: number;
+      downvoteCount: number;
     }
 
     return NextResponse.json<VoteResponse>({
       success: true,
       upvotes: question.upvotes.map((id: string) => id.toString()),
       downvotes: question.downvotes.map((id: string) => id.toString()),
-      voteCount: question.upvotes.length - question.downvotes.length
+      upvoteCount: question.upvotes.length,
+      downvoteCount: question.downvotes.length
     });
   } catch (error) {
     console.error("Error voting on question:", error)

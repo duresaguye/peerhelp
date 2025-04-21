@@ -4,27 +4,29 @@ import dbConnect from "@/lib/db"
 import Reply from "@/models/Reply"
 import Answer from "@/models/Answer"
 import { authOptions } from "../../../auth/[...nextauth]/route"
+import { NextRequest } from "next/server"
 
 
 export async function GET(
-    request: Request,
-    { params }: { params: { id: string } }
-  ) {
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
     await dbConnect()
-  
-    try {
-      const replies = await Reply.find({ answer: params.id })
-        .populate("author", "name image")
-        .sort({ createdAt: -1 }) // newest first
-  
-      return NextResponse.json(replies)
-    } catch (error) {
-      return NextResponse.json(
-        { error: "Failed to fetch replies" },
-        { status: 500 }
-      )
-    }
+    const { id: answerId } = await Promise.resolve(params)
+
+    const replies = await Reply.find({ answer: answerId })
+      .populate("author", "name image")
+      .sort({ createdAt: -1 }) // newest first
+
+    return NextResponse.json(replies)
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Failed to fetch replies" },
+      { status: 500 }
+    )
   }
+}
   
 export async function POST(
   request: Request,

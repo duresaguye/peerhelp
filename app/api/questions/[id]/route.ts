@@ -5,11 +5,13 @@ import dbConnect from "@/lib/db"
 import Question from "@/models/Question"
 import Answer from "@/models/Answer"
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
     await dbConnect()
-
-    const questionId = params.id
+    const { id: questionId } = await Promise.resolve(params)
 
     const question = await Question.findById(questionId)
       .populate("author", "name image")

@@ -183,22 +183,22 @@ export default function Home() {
       : "Just now"
   }
 
-  const handleVoteUpdate = (questionId: string, newVoteCount: number, userVote: "up" | "down" | null) => {
+  const handleVoteUpdate = (questionId: string, upvoteCount: number, downvoteCount: number, userVote: "up" | "down" | null) => {
     setQuestions(prev => prev.map(question => {
       if (question._id === questionId) {
         return {
           ...question,
-          voteCount: newVoteCount,
           upvotes: userVote === "up" 
-            ? [...question.upvotes, session?.user?.id || ""]
+            ? [...question.upvotes.filter(id => id !== session?.user?.id), session?.user?.id || ""]
             : question.upvotes.filter(id => id !== session?.user?.id),
           downvotes: userVote === "down" 
-            ? [...question.downvotes, session?.user?.id || ""]
+            ? [...question.downvotes.filter(id => id !== session?.user?.id), session?.user?.id || ""]
             : question.downvotes.filter(id => id !== session?.user?.id)
         }
       }
       return question
     }))
+    setForceRefresh(prev => prev + 1)
   }
 
   return (
@@ -324,25 +324,22 @@ export default function Home() {
                   <div className="flex">
                     <div className="flex flex-col items-center gap-2 border-r p-4">
                       <VoteButtons
-                        initialVotes={question.voteCount}
                         itemId={question._id}
                         itemType="question"
                         size="sm"
-                        initialUserVote={
-                          session?.user?.id
-                            ? question.upvotes.includes(session.user.id)
-                              ? "up"
-                              : question.downvotes.includes(session.user.id)
+                        initialUpvotes={question.upvotes.length}
+                        initialDownvotes={question.downvotes.length}
+                        initialUserVote={session?.user?.id
+                          ? question.upvotes.includes(session.user.id)
+                            ? "up"
+                            : question.downvotes.includes(session.user.id)
                               ? "down"
                               : null
-                            : null
-                        }
-                        onVoteSuccess={(id, newCount, userVote) => {
-                          handleVoteUpdate(id, newCount, userVote)
+                          : null}
+                        onVoteSuccess={(id, upvoteCount, downvoteCount, userVote) => {
+                          handleVoteUpdate(id, upvoteCount, downvoteCount, userVote)
                           router.refresh()
-                        }}
-                        
-                      />
+                        } } initialVotes={0}                      />
                       <div className="flex items-center gap-1 text-sm text-muted-foreground">
                         <MessageSquare className="h-4 w-4" />
                         <span>{question.answerCount}</span>

@@ -72,6 +72,7 @@ function ReplyComponent({
   const [isReplying, setIsReplying] = useState(false)
   const [replyContent, setReplyContent] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showActions, setShowActions] = useState(false)
 
   const handleSubmitReply = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -106,26 +107,49 @@ function ReplyComponent({
   }
 
   return (
-    <div className="flex gap-3 mt-3 pl-10">
-      <Avatar className="h-6 w-6">
+    <div className="flex gap-3 mt-3 pl-10 group">
+      <Avatar className="h-8 w-8">
         <AvatarImage src={reply.author.image} />
         <AvatarFallback>{reply.author.name[0]}</AvatarFallback>
       </Avatar>
       <div className="flex-1">
         <div className="flex items-center gap-2 mb-1">
-          <span className="text-sm font-medium">{reply.author.name}</span>
+          <span className="text-sm font-medium hover:underline cursor-pointer">{reply.author.name}</span>
           <span className="text-muted-foreground text-sm">
             {formatDate(reply.createdAt)}
           </span>
+          {session?.user?.id === reply.author._id && (
+            <div className="relative ml-auto">
+              <button 
+                onClick={() => setShowActions(!showActions)}
+                className="p-1 rounded-full hover:bg-muted/50 opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </button>
+              {showActions && (
+                <div className="absolute right-0 mt-1 w-48 rounded-md shadow-lg bg-background border">
+                  <div className="py-1">
+                    <button className="w-full text-left px-4 py-2 text-sm hover:bg-muted/50">
+                      Edit
+                    </button>
+                    <button className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-muted/50">
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
-        <div className="text-sm">{reply.content}</div>
+        <div className="text-sm bg-muted/50 rounded-lg p-3">{reply.content}</div>
         
-        <div className="flex items-center gap-4 mt-1">
+        <div className="flex items-center gap-4 mt-2">
           <VoteButtons
-            initialVotes={reply.voteCount}
             itemId={reply._id}
             itemType="reply"
             size="sm"
+            initialUpvotes={reply.upvotes.length}
+            initialDownvotes={reply.downvotes.length}
             initialUserVote={
               session?.user?.id
                 ? reply.upvotes.includes(session.user.id)
@@ -140,7 +164,7 @@ function ReplyComponent({
           {session && (
             <button 
               onClick={() => setIsReplying(!isReplying)}
-              className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1"
+              className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors"
             >
               <Reply className="h-3 w-3" />
               Reply
@@ -149,13 +173,13 @@ function ReplyComponent({
         </div>
 
         {isReplying && (
-          <div className="mt-2 pl-4">
+          <div className="mt-3 pl-4">
             <form onSubmit={handleSubmitReply}>
               <Textarea
                 value={replyContent}
                 onChange={(e) => setReplyContent(e.target.value)}
                 placeholder="Write your reply..."
-                className="min-h-[60px] text-sm"
+                className="min-h-[60px] text-sm bg-background"
                 disabled={isSubmitting}
               />
               <div className="flex justify-end gap-2 mt-2">
@@ -217,8 +241,25 @@ function AnswerComponent({
   const [replyContent, setReplyContent] = useState("")
   const [showReplyForm, setShowReplyForm] = useState(false)
   const [isSubmittingReply, setIsSubmittingReply] = useState(false)
-  const [replies, setReplies] = useState(answer.replies || [])
+  const [replies, setReplies] = useState<Reply[]>(answer.replies || [])
   const [loadingReplies, setLoadingReplies] = useState(false)
+  const [upvotes, setUpvotes] = useState(answer.upvotes.length)
+  const [downvotes, setDownvotes] = useState(answer.downvotes.length)
+  const [userVote, setUserVote] = useState<"up" | "down" | null>(
+    session?.user?.id
+      ? answer.upvotes.includes(session.user.id)
+        ? "up"
+        : answer.downvotes.includes(session.user.id)
+        ? "down"
+        : null
+      : null
+  )
+
+  const handleVoteUpdate = (upvoteCount: number, downvoteCount: number, newUserVote: "up" | "down" | null) => {
+    setUpvotes(upvoteCount)
+    setDownvotes(downvoteCount)
+    setUserVote(newUserVote)
+  }
 
   // Fetch replies when component mounts
   useEffect(() => {
@@ -272,8 +313,6 @@ function AnswerComponent({
     }
   }
 
- 
-
   function handleAcceptAnswer(_id: string): void {
     throw new Error("Function not implemented.")
   }
@@ -283,84 +322,78 @@ function AnswerComponent({
   }
 
   return (
-    <div className="p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-      <div className="flex gap-3">
-        {/* Voting Section */}
-        <div className="flex flex-col items-center gap-1">
+    <div className="flex gap-3 mt-4">
+      <Avatar className="h-8 w-8">
+        <AvatarImage src={answer.author.image} />
+        <AvatarFallback>{answer.author.name[0]}</AvatarFallback>
+      </Avatar>
+      <div className="flex-1">
+        <div className="bg-muted/50 rounded-2xl p-3">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="font-medium text-sm">{answer.author.name}</span>
+            <span className="text-muted-foreground text-xs">
+              {formatDate(answer.createdAt)}
+            </span>
+          </div>
+          <div className="text-sm whitespace-pre-wrap">{answer.content}</div>
+        </div>
+        
+        <div className="flex items-center gap-4 mt-1 ml-2">
           <VoteButtons
-            initialVotes={answer.voteCount}
             itemId={answer._id}
             itemType="answer"
             size="sm"
-            initialUserVote={
-              session?.user?.id
-                ? answer.upvotes.includes(session.user.id)
-                  ? "up"
-                  : answer.downvotes.includes(session.user.id)
-                    ? "down"
-                    : null
-                : null
-            }
+            initialUpvotes={upvotes}
+            initialDownvotes={downvotes}
+            initialUserVote={userVote}
+            onVoteSuccess={(id, upvoteCount, downvoteCount, newUserVote) => {
+              handleVoteUpdate(upvoteCount, downvoteCount, newUserVote)
+            }}
           />
-        </div>
-
-        {/* Main Content */}
-        <div className="flex-1">
-          {/* Author & Metadata */}
-          <div className="flex items-center gap-2 mb-2">
-            <Avatar className="h-6 w-6">
-              <AvatarImage src={answer.author.image} />
-              <AvatarFallback>{answer.author.name[0]}</AvatarFallback>
-            </Avatar>
-            <span className="text-sm font-medium">{answer.author.name}</span>
-            <span className="text-muted-foreground text-sm">·</span>
-            <span className="text-muted-foreground text-sm">
-              {formatDate(answer.createdAt)}
-            </span>
-            
-            {/* Accept answer button (only shown to question author) */}
-            {questionAuthorId === session?.user?.id && (
-              <button
-                onClick={() => handleAcceptAnswer(answer._id)}
-                className="ml-auto text-sm flex items-center gap-1 text-muted-foreground hover:text-green-600"
-              >
-                {answer.accepted ? (
-                  <>
-                    <Check className="h-4 w-4 text-green-600" />
-                    <span className="text-green-600">Accepted</span>
-                  </>
-                ) : (
-                  "Accept Answer"
-                )}
-              </button>
-            )}
-          </div>
-
-          {/* Answer Content */}
-          <div className="prose prose-sm dark:prose-invert max-w-none">
-            {answer.content}
-          </div>
-
-          {/* Action buttons */}
-          <div className="mt-2 flex items-center gap-4">
+          
+          {session && (
             <button 
               onClick={() => setShowReplyForm(!showReplyForm)}
-              className="text-sm text-muted-foreground hover:text-primary flex items-center gap-1"
+              className="text-xs text-muted-foreground hover:text-primary"
             >
-              <Reply className="h-4 w-4" />
               Reply
             </button>
-          </div>
+          )}
+          
+          {questionAuthorId === session?.user?.id && (
+            <button
+              onClick={() => handleAcceptAnswer(answer._id)}
+              className={cn(
+                "text-xs flex items-center gap-1",
+                answer.accepted ? "text-green-600" : "text-muted-foreground hover:text-green-600"
+              )}
+            >
+              {answer.accepted ? (
+                <>
+                  <Check className="h-3 w-3" />
+                  <span>Accepted</span>
+                </>
+              ) : (
+                "Accept Answer"
+              )}
+            </button>
+          )}
+        </div>
 
-          {/* Reply form */}
-          {showReplyForm && (
-            <div className="mt-3 pl-6">
-              <form onSubmit={handleSubmitReply}>
+        {/* Reply form */}
+        {showReplyForm && (
+          <div className="mt-3">
+            <form onSubmit={handleSubmitReply} className="flex gap-3">
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={session?.user?.image} />
+                <AvatarFallback>{session?.user?.name?.[0]}</AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
                 <Textarea
                   value={replyContent}
                   onChange={(e) => setReplyContent(e.target.value)}
-                  placeholder="Write your reply..."
-                  className="min-h-[80px] text-sm"
+                  placeholder="Write a reply..."
+                  className="min-h-[60px] text-sm bg-background"
                   disabled={isSubmittingReply}
                 />
                 <div className="flex justify-end gap-2 mt-2">
@@ -377,38 +410,43 @@ function AnswerComponent({
                     size="sm"
                     disabled={isSubmittingReply || !replyContent.trim()}
                   >
-                    {isSubmittingReply ? "Posting..." : "Post Reply"}
+                    {isSubmittingReply ? "Posting..." : "Reply"}
                   </Button>
                 </div>
-              </form>
-            </div>
-          )}
+              </div>
+            </form>
+          </div>
+        )}
 
-          {/* Replies list */}
-        
-{loadingReplies ? (
-  <div className="mt-3 pl-6 flex justify-center">
-    <Loader2 className="h-5 w-5 animate-spin" />
-  </div>
-) : replies.length > 0 ? (
-  <div className="mt-3 border-l-2 border-muted pl-4">
-    {replies.map((reply) => (
-      <ReplyComponent 
-        key={reply._id} 
-        reply={reply}
-        session={session}
-        answerId={answer._id}
-      />
-    ))}
-  </div>
-) : (
-  showReplyForm && (
-    <div className="mt-3 pl-6 text-sm text-muted-foreground">
-      No replies yet. Be the first to reply!
-    </div>
-  )
-)}
-        </div>
+        {/* Replies list */}
+        {loadingReplies ? (
+          <div className="mt-3 pl-6 flex justify-center">
+            <Loader2 className="h-5 w-5 animate-spin" />
+          </div>
+        ) : replies.length > 0 ? (
+          <div className="mt-3 pl-6">
+            {replies.map((reply) => {
+              if (!reply._id) {
+                console.error('Reply missing _id:', reply);
+                return null;
+              }
+              return (
+                <ReplyComponent 
+                  key={reply._id} 
+                  reply={reply}
+                  session={session}
+                  answerId={answer._id}
+                />
+              );
+            })}
+          </div>
+        ) : (
+          showReplyForm && (
+            <div className="mt-3 pl-6 text-sm text-muted-foreground">
+              No replies yet. Be the first to reply!
+            </div>
+          )
+        )}
       </div>
     </div>
   )
@@ -617,10 +655,11 @@ export default function QuestionPage() {
           <CardHeader className="flex flex-row items-start gap-4 space-y-0">
             <div className="flex flex-col items-center gap-2">
               <VoteButtons
-                initialVotes={question.voteCount}
                 itemId={question._id}
                 itemType="question"
                 size="lg"
+                initialUpvotes={question.upvotes.length}
+                initialDownvotes={question.downvotes.length}
                 initialUserVote={
                   session?.user?.id
                     ? question.upvotes.includes(session.user.id)
@@ -657,7 +696,7 @@ export default function QuestionPage() {
                 <div className="flex flex-wrap gap-4">
                   {question.images.map((image, index) => (
                     <ImagePreview
-                      key={index}
+                      key={`${question._id}-${index}`}
                       src={image || "/placeholder.svg"}
                       alt={`Image ${index + 1} for question ${question._id}`}
                       width={200}

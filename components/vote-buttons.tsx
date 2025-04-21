@@ -12,14 +12,16 @@ type VoteItemType = "question" | "answer" |"reply"
 type SizeVariant = "sm" | "md" | "lg"
 
 interface VoteButtonsProps {
-  initialVotes: number
+  initialVotes?: number
   itemId: string
   itemType: VoteItemType
   onVote?: (newVoteCount: number) => void
   vertical?: boolean
   size?: SizeVariant
   initialUserVote?: VoteDirection
-  onVoteSuccess?: (itemId: string, newVoteCount: number, userVote: "up" | "down" | null) => void;
+  onVoteSuccess?: (itemId: string, upvoteCount: number, downvoteCount: number, userVote: VoteDirection) => void
+  initialUpvotes?: number
+  initialDownvotes?: number
 }
 
 const SIZE_CLASSES: Record<SizeVariant, { button: string; icon: string; text: string }> = {
@@ -48,8 +50,12 @@ export default function VoteButtons({
   vertical = true,
   size = "md",
   initialUserVote = null,
+  onVoteSuccess,
+  initialUpvotes = 0,
+  initialDownvotes = 0,
 }: VoteButtonsProps) {
-  const [votes, setVotes] = useState(initialVotes)
+  const [upvotes, setUpvotes] = useState(initialUpvotes)
+  const [downvotes, setDownvotes] = useState(initialDownvotes)
   const [userVote, setUserVote] = useState<VoteDirection>(initialUserVote)
   const [isVoting, setIsVoting] = useState(false)
   const { requireAuth } = useAuthRedirect()
@@ -73,9 +79,14 @@ export default function VoteButtons({
 
       const data = await response.json()
       
-      setVotes(data.voteCount)
-      setUserVote(current => current === direction ? null : direction)
-      onVote?.(data.voteCount)
+      setUpvotes(data.upvoteCount)
+      setDownvotes(data.downvoteCount)
+      const newVoteDirection = userVote === direction ? null : direction
+      setUserVote(newVoteDirection)
+      onVote?.(data.upvoteCount - data.downvoteCount)
+      if (onVoteSuccess) {
+        onVoteSuccess(itemId, data.upvoteCount, data.downvoteCount, newVoteDirection)
+      }
       setForceRefresh(prev => prev + 1);
     } catch (error) {
       toast.error("Failed to register vote. Please try again.")
@@ -98,14 +109,22 @@ export default function VoteButtons({
         onClick={() => handleVote("up")}
       />
       
-      <span className={cn(
-        "font-medium select-none",
-        currentSize.text,
-        votes > 0 ? "text-green-600 dark:text-green-400" : 
-        votes < 0 ? "text-red-600 dark:text-red-400" : ""
-      )}>
-        {votes}
-      </span>
+      <div className="flex flex-col items-center gap-1">
+        <span className={cn(
+          "font-medium select-none",
+          currentSize.text,
+          "text-green-600 dark:text-green-400"
+        )}>
+          {upvotes}
+        </span>
+        <span className={cn(
+          "font-medium select-none",
+          currentSize.text,
+          "text-red-600 dark:text-red-400"
+        )}>
+          {downvotes}
+        </span>
+      </div>
 
       <VoteButton
         direction="down"

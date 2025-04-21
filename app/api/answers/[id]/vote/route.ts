@@ -4,19 +4,19 @@ import { authOptions } from "../../../auth/[...nextauth]/route"
 import dbConnect from "@/lib/db"
 import Answer from "@/models/Answer"
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
     const session = await getServerSession(authOptions)
-
-  
 
     if (!session || !session.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     await dbConnect()
-
-    const { id:answerId } = params
+    const { id: answerId } = await Promise.resolve(params)
     const { voteType } = await req.json()
 
     if (voteType !== "up" && voteType !== "down") {
@@ -69,9 +69,11 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     if (currentHasDownvoted) userVote = "down"
 
     return NextResponse.json({
-      upvotes: answer.upvotes.length,
-      downvotes: answer.downvotes.length,
-      voteCount: answer.upvotes.length - answer.downvotes.length,
+      success: true,
+      upvotes: answer.upvotes.map((id: string) => id.toString()),
+      downvotes: answer.downvotes.map((id: string) => id.toString()),
+      upvoteCount: answer.upvotes.length,
+      downvoteCount: answer.downvotes.length,
       userVote 
     })
   } catch (error) {

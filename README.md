@@ -1,7 +1,5 @@
 # 📚 PeerHelp
 
-**Live Site:** [peerhelp-v.vercel.app](https://peerhelp-v.vercel.app)  
-**Repository:** [github.com/duresaguye/peerhelp](https://github.com/duresaguye/peerhelp)
 
 **PeerHelp** is a collaboration platform where users can post questions, provide answers, and earn point badges for their contributions. Inspired by platforms like Stack Overflow, PeerHelp promotes knowledge sharing and community problem-solving in a simple, open, and engaging way.
 

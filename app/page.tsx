@@ -55,15 +55,63 @@ interface Question {
 }
 
 const subjects = [
-  { title: "Mathematics", value: "mathematics" },
-  { title: "Computer Science", value: "computer-science" },
-  { title: "Physics", value: "physics" },
-  { title: "Chemistry", value: "chemistry" },
-  { title: "Biology", value: "biology" },
-  { title: "Literature", value: "literature" },
-  { title: "History", value: "history" },
-  { title: "Engineering", value: "engineering" },
-]
+   
+  {
+    title: "Web Development",
+    value: "web-development",
+    description: "HTML, CSS, JavaScript, Frontend Frameworks"
+  },
+  {
+    title: "Backend Development",
+    value: "backend-development",
+    description: "Node.js, Django, APIs, Databases"
+  },
+  {
+    title: "Mobile Development",
+    value: "mobile-development",
+    description: "React Native, Flutter, Swift, Kotlin"
+  },
+  {
+    title: "Data Structures & Algorithms",
+    value: "dsa",
+    description: "Arrays, Trees, Graphs, Sorting, Searching"
+  },
+  {
+    title: "Machine Learning",
+    value: "machine-learning",
+    description: "Neural Networks, TensorFlow, PyTorch, AI"
+  },
+  {
+    title: "Cybersecurity",
+    value: "cybersecurity",
+    description: "Encryption, Ethical Hacking, Network Security"
+  },
+  {
+    title: "Cloud Computing",
+    value: "cloud-computing",
+    description: "AWS, Azure, GCP, Serverless Architecture"
+  },
+  {
+    title: "DevOps",
+    value: "devops",
+    description: "CI/CD, Docker, Kubernetes, Infrastructure"
+  },
+  {
+    title: "Blockchain",
+    value: "blockchain",
+    description: "Smart Contracts, Cryptocurrency, Web3"
+  },
+  {
+    title: "Game Development",
+    value: "game-development",
+    description: "Unity, Unreal Engine, Game Design"
+  },
+  {
+    title: "Data Science",
+    value: "data-science",
+    description: "Python, R, SQL, Data Visualization"
+  }
+];
 
 export default function Home() {
   const router = useRouter()
@@ -81,7 +129,7 @@ export default function Home() {
   const { data: session } = useSession()
   const [forceRefresh, setForceRefresh] = useState(0);
 
-  
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchQuery)
@@ -343,7 +391,17 @@ export default function Home() {
                       <div className="flex items-center gap-1 text-sm text-muted-foreground">
                         <MessageSquare className="h-4 w-4" />
                         <span>{question.answerCount}</span>
+                        <span className="mx-1"> answers</span>
+                        
                       </div>
+                      <Link 
+  href={`/questions/${question._id}`} 
+  className="text-lg font-medium hover:underline flex flex-col"
+>
+ 
+View & Answer Question
+</Link>
+
                     </div>
 
                     <div className="flex-1 p-4">
